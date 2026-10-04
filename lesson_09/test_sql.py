@@ -2,105 +2,129 @@ from sqlalchemy import text
 from lesson_09.db import db
 
 TEST_USER_ID = 999991
+TEST_LEVEL = "Beginner"
+TEST_EDUCATION_FORM = "personal"
+TEST_SUBJECT_ID = 1
+
+SQL_INSERT_USER = text(
+    "INSERT INTO users (user_id, user_email, subject_id) "
+    "VALUES (:user_id, :email, :subject_id)"
+)
+
+SQL_INSERT_STUDENT = text(
+    'INSERT INTO student (user_id, "level", education_form, subject_id) '
+    "VALUES (:user_id, :level, :education_form, :subject_id)"
+)
+
+SQL_SELECT_STUDENT = text(
+    'SELECT "level", education_form, subject_id '
+    "FROM student WHERE user_id = :id"
+)
+
+SQL_SELECT_STUDENT_LEVEL = text(
+    'SELECT "level", education_form FROM student WHERE user_id = :id'
+)
+
+SQL_UPDATE_STUDENT = text(
+    'UPDATE student SET "level" = :level, '
+    "education_form = :education_form "
+    "WHERE user_id = :id"
+)
+
+SQL_SELECT_STUDENT_ID = text(
+    "SELECT user_id FROM student WHERE user_id = :id"
+)
+
+SQL_DELETE_STUDENT = text(
+    "DELETE FROM student WHERE user_id = :id"
+)
+
+SQL_DELETE_USER = text(
+    "DELETE FROM users WHERE user_id = :id"
+)
 
 
-def test_add_user():
-    db.execute(
-        text(
-            "INSERT INTO users (user_id, user_email, subject_id) "
-            "VALUES (:user_id, :email, :subject_id)"
-        ),
-        {
-            "user_id": TEST_USER_ID,
-            "email": "test_add@example.com",
-            "subject_id": 1,
-        },
-    )
+def test_add_student():
+    db.execute(SQL_INSERT_USER, {
+        "user_id": TEST_USER_ID,
+        "email": "student_test@example.com",
+        "subject_id": TEST_SUBJECT_ID,
+    })
+    db.execute(SQL_INSERT_STUDENT, {
+        "user_id": TEST_USER_ID,
+        "level": TEST_LEVEL,
+        "education_form": TEST_EDUCATION_FORM,
+        "subject_id": TEST_SUBJECT_ID,
+    })
+
+    row = db.execute(SQL_SELECT_STUDENT, {"id": TEST_USER_ID}).fetchone()
+
+    assert row is not None, "Студент не был добавлен"
+    assert row.level == TEST_LEVEL
+    assert row.education_form == TEST_EDUCATION_FORM
+    assert row.subject_id == TEST_SUBJECT_ID
+
+    db.execute(SQL_DELETE_STUDENT, {"id": TEST_USER_ID})
+    db.execute(SQL_DELETE_USER, {"id": TEST_USER_ID})
+
+
+def test_update_student():
+    NEW_LEVEL = "Advanced"
+    NEW_EDUCATION_FORM = "group"
+
+    db.execute(SQL_INSERT_USER, {
+        "user_id": TEST_USER_ID,
+        "email": "student_test@example.com",
+        "subject_id": TEST_SUBJECT_ID,
+    })
+    db.execute(SQL_INSERT_STUDENT, {
+        "user_id": TEST_USER_ID,
+        "level": TEST_LEVEL,
+        "education_form": TEST_EDUCATION_FORM,
+        "subject_id": TEST_SUBJECT_ID,
+    })
+
+    db.execute(SQL_UPDATE_STUDENT, {
+        "id": TEST_USER_ID,
+        "level": NEW_LEVEL,
+        "education_form": NEW_EDUCATION_FORM,
+    })
 
     row = db.execute(
-        text("SELECT user_email FROM users WHERE user_id = :id"),
-        {"id": TEST_USER_ID},
+        SQL_SELECT_STUDENT_LEVEL, {"id": TEST_USER_ID}
     ).fetchone()
 
-    assert row is not None, "Пользователь не был добавлен"
-    assert row.user_email == "test_add@example.com"
+    assert row is not None, "Студент не найден после обновления"
+    assert row.level == NEW_LEVEL
+    assert row.education_form == NEW_EDUCATION_FORM
+
+    db.execute(SQL_DELETE_STUDENT, {"id": TEST_USER_ID})
+    db.execute(SQL_DELETE_USER, {"id": TEST_USER_ID})
 
 
-    db.execute(
-        text("DELETE FROM users WHERE user_id = :id"),
-        {"id": TEST_USER_ID},
-    )
+def test_delete_student():
+    db.execute(SQL_INSERT_USER, {
+        "user_id": TEST_USER_ID,
+        "email": "student_test@example.com",
+        "subject_id": TEST_SUBJECT_ID,
+    })
+    db.execute(SQL_INSERT_STUDENT, {
+        "user_id": TEST_USER_ID,
+        "level": TEST_LEVEL,
+        "education_form": TEST_EDUCATION_FORM,
+        "subject_id": TEST_SUBJECT_ID,
+    })
 
-
-def test_update_user():
-    db.execute(
-        text(
-            "INSERT INTO users (user_id, user_email, subject_id) "
-            "VALUES (:id, :email, :subject_id)"
-        ),
-        {
-            "id": TEST_USER_ID,
-            "email": "old@example.com",
-            "subject_id": 1,
-        },
-    )
-
-    db.execute(
-        text(
-            "UPDATE users SET user_email = :email, "
-            "subject_id = :subject_id WHERE user_id = :id"
-        ),
-        {
-            "id": TEST_USER_ID,
-            "email": "new@example.com",
-            "subject_id": 2,
-        },
-    )
-
-    row = db.execute(
-        text("SELECT user_email, subject_id FROM users WHERE user_id = :id"),
-        {"id": TEST_USER_ID},
-    ).fetchone()
-
-    assert row is not None, "Пользователь не найден после обновления"
-    assert row.user_email == "new@example.com"
-    assert row.subject_id == 2
-
-    db.execute(
-        text("DELETE FROM users WHERE user_id = :id"),
-        {"id": TEST_USER_ID},
-    )
-
-
-def test_delete_user():
-    db.execute(
-        text(
-            "INSERT INTO users (user_id, user_email, subject_id) "
-            "VALUES (:id, :email, :subject_id)"
-        ),
-        {
-            "id": TEST_USER_ID,
-            "email": "delete_me@example.com",
-            "subject_id": 1,
-        },
-    )
-
-    # Убеждаемся, что создан
     created = db.execute(
-        text("SELECT user_id FROM users WHERE user_id = :id"),
-        {"id": TEST_USER_ID},
+        SQL_SELECT_STUDENT_ID, {"id": TEST_USER_ID}
     ).fetchone()
-    assert created is not None, "Пользователь не был создан перед удалением"
+    assert created is not None, "Студент не был создан перед удалением"
 
-    # Удаляем
-    db.execute(
-        text("DELETE FROM users WHERE user_id = :id"),
-        {"id": TEST_USER_ID},
-    )
+    db.execute(SQL_DELETE_STUDENT, {"id": TEST_USER_ID})
 
     gone = db.execute(
-        text("SELECT user_id FROM users WHERE user_id = :id"),
-        {"id": TEST_USER_ID},
+        SQL_SELECT_STUDENT_ID, {"id": TEST_USER_ID}
     ).fetchone()
-    assert gone is None, "Пользователь всё ещё присутствует после удаления"
+    assert gone is None, "Студент всё ещё присутствует после удаления"
 
+    db.execute(SQL_DELETE_USER, {"id": TEST_USER_ID})
