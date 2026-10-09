@@ -15,20 +15,24 @@ class CalculatorPage:
 
     def open(self):
         self.driver.get(config.CALC_URL)
-        return self
 
     def set_delay(self, seconds):
-        delay_input = self.wait.until(EC.element_to_be_clickable(self.DELAY_INPUT))
+        delay_input = self.wait.until(
+            EC.element_to_be_clickable(self.DELAY_INPUT)
+        )
         delay_input.clear()
         delay_input.send_keys(str(seconds))
-        return self
 
     def click_btn(self, label):
         locator = (By.XPATH, f'//span[text() = "{label}"]')
         btn = self.wait.until(EC.element_to_be_clickable(locator))
         btn.click()
-        return self
 
     def wait_for_result(self, expected):
-        self.long_wait.until(EC.text_to_be_present_in_element(self.RESULT_ELEMENT, expected))
-        return self
+        self.long_wait.until(
+            EC.text_to_be_present_in_element(
+                self.RESULT_ELEMENT, str(expected)
+            )
+        )
+        result = self.driver.find_element(*self.RESULT_ELEMENT)
+        return result.text
